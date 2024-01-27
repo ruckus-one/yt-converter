@@ -1,7 +1,7 @@
 use std::fmt::Write;
-
+use std::fs::rename;
 use inquire::Text;
-use rustube::{block, Callback, CallbackArguments, Error, Id, Video, Result};
+use rustube::{block, Callback, CallbackArguments, Error, Id, Result, Video};
 use indicatif::{ ProgressBar, ProgressState, ProgressStyle };
 
 async fn download(yt_id: String, cb: Callback) -> Result<std::path::PathBuf> {
@@ -11,11 +11,15 @@ async fn download(yt_id: String, cb: Callback) -> Result<std::path::PathBuf> {
         .await?
         .best_audio()
         .ok_or(Error::NoStreams).unwrap()
-        .download_to_dir_with_callback(".", cb)
+        .download_to_dir_with_callback("./storage", cb)
         .await
 }
 
 fn main() {
+    match std::fs::create_dir_all("./storage") {
+        Ok(_) => println!("Created ./storage directory."),
+        Err(_) => println!("Error creating ./storage directory"),
+    }
 
     let progress = ProgressBar::new(1);
 
@@ -40,8 +44,22 @@ fn main() {
     match yt_id {
         Ok(yt_id) => {
             match block!(download(yt_id, cb)) {
-                Ok(_) => print!("ok"),
-                Err(_) => print!("err"),
+                Ok(path) => {
+                    match path.to_str() {
+                        Some(path) => {
+                            let new_path = path
+                                .replace(".mp4", ".mp3")
+                                .replace(".webm", ".mp3");
+
+                            match rename(path, &new_path) {
+                                Ok(_) =>  println!("Done! -> {}", new_path),
+                                Err(err) => println!("Something went wrong. {}", err),
+                            }
+                        },
+                        None => println!("Something went wrong."),
+                    }
+                },
+                Err(_) => println!("Something went wrong."),
             }
         },
         Err(_) => println!("Something went wrong."),
