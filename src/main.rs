@@ -1,4 +1,9 @@
-use link_parser::parse_yt_link;
+mod utils;
+use rustube::{Callback, CallbackArguments};
+use utils::parse_yt_link;
+
+mod downloader;
+
 use std::sync::mpsc;
 use std::{
     num::NonZeroUsize,
@@ -10,6 +15,7 @@ use tiny_http::{Response, Server};
 use std::fs;
 use std::path::Path;
 use redis::Commands;
+use std::fs::rename;
 
 extern crate redis;
 
@@ -173,6 +179,35 @@ fn main() {
                             match conn.lpop::<&str, Vec<String>>(LIST_KEY, NonZeroUsize::new(1)) {
                                 Ok(job_info) => {
                                     println!("Job: {}", job_info[0]);
+
+                                    let cb = Callback::new()
+                                    .connect_on_progress_closure(move |args: CallbackArguments| {
+                                        match args.content_length {
+                                            Some(length) => {
+                                                println!("Downloading: ({}/{})", args.current_chunk, length);
+                                            },
+                                            None => (),
+                                        }
+                                    });
+
+                                    match downloader::download(job_info[0].clone(), Some(cb)) {
+                                        Ok(path) => {
+                                            match path.to_str() {
+                                                Some(path) => {
+                                                    let new_path = path
+                                                        .replace(".mp4", ".mp3")
+                                                        .replace(".webm", ".mp3");
+                        
+                                                    match rename(path, &new_path) {
+                                                        Ok(_) =>  println!("Done! -> {}", new_path),
+                                                        Err(err) => println!("Something went wrong. {}", err),
+                                                    }
+                                                },
+                                                None => println!("Something went wrong."),
+                                            }
+                                        },
+                                        Err(_) => println!("Something went wrong."),
+                                    }
                                 }
                                 Err(err) => println!("Failed to fetch next job info: {}", err),
                             }

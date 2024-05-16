@@ -4,16 +4,8 @@ use inquire::Text;
 use rustube::{block, Callback, CallbackArguments, Error, Id, Result, Video};
 use indicatif::{ ProgressBar, ProgressState, ProgressStyle };
 
-async fn download(yt_id: String, cb: Callback) -> Result<std::path::PathBuf> {
-    let id = Id::from_raw(&yt_id.as_str()).unwrap();
-
-    Video::from_id(id.into_owned())
-        .await?
-        .best_audio()
-        .ok_or(Error::NoStreams).unwrap()
-        .download_to_dir_with_callback("./storage", cb)
-        .await
-}
+extern crate yt_downloader;
+use yt_downloader::downloader;
 
 fn main() {
     match std::fs::create_dir_all("./storage") {
@@ -43,7 +35,7 @@ fn main() {
 
     match yt_id {
         Ok(yt_id) => {
-            match block!(download(yt_id, cb)) {
+            match (downloader::download(yt_id, Some(cb))) {
                 Ok(path) => {
                     match path.to_str() {
                         Some(path) => {

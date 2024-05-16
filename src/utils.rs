@@ -42,4 +42,3 @@ mod tests {
         assert!(video_id.is_none());
     }
 }
-

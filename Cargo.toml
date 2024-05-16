@@ -3,15 +3,12 @@ name = "yt-downloader"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "service"
+[lib]
+path = "src/lib.rs"
 
 [[bin]]
 name = "cli"
-
-[lib]
-name = "link_parser"
-path = "src/link_parser.rs"
+path = "src/bin/cli.rs"
 
 [dependencies]
 indicatif = "0.17.7"
